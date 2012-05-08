@@ -1,0 +1,67 @@
+#!/usr/bin/env ruby
+require File.expand_path("../../lib/virtualbox-guestcontrol.rb", __FILE__)
+
+class VirtualBoxCommand < Clamp::Command
+  option ["-u", "--username"], "USERNAME", "username to log in as"
+  option ["-p", "--password"], "PASSWORD", "password to log in as"
+
+  def virtual_box
+    VirtualBox::GuestControl::Runner.configure do |c|
+      c.name = name
+      c.username = username
+      c.password = password
+    end
+    VirtualBox::GuestControl::Runner.new
+  end
+
+  subcommand "start", "start up the given VM" do
+    parameter "NAME", "name of virtual machine"
+
+    def execute
+      virtual_box.start!
+    end
+  end
+
+  subcommand "shutdown", "shutdown the given VM" do
+    parameter "NAME", "name of virtual machine"
+
+    def execute
+      virtual_box.shutdown!
+    end
+  end
+
+  subcommand "restart", "restart the given VM" do
+    parameter "NAME", "name of virtual machine"
+
+    def execute
+      virtual_box.restart!
+    end
+  end
+
+  subcommand "info", "list all known info about the VM" do
+    parameter "NAME", "name of virtual machine"
+
+    def execute
+      virtual_box.state.tap do |map|
+        map.keys.sort.each do |key|
+          puts [key, map[key]].join(": ")
+        end
+      end
+    end
+  end
+
+  subcommand "status", "says if the vm is booted or not" do
+    parameter "NAME", "name of virtual machine"
+
+    def execute
+      if virtual_box.started?
+        puts "VM is started"
+      else
+        puts "VM is shutdown"
+      end
+    end
+  end
+end
+
+VirtualBoxCommand.run(ARGV)
+

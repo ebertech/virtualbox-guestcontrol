@@ -1,5 +1,5 @@
-module Virtualbox
-  module Guestcontrol
-    VERSION = "0.0.1"
+module VirtualBox
+  module GuestControl
+    VERSION = "1.0.0"
   end
 end

@@ -4,8 +4,8 @@ require File.expand_path('../lib/virtualbox-guestcontrol/version', __FILE__)
 Gem::Specification.new do |gem|
   gem.authors       = ["Andrew Eberbach"]
   gem.email         = ["andrew@ebertech.ca"]
-  gem.description   = %q{TODO: Write a gem description}
-  gem.summary       = %q{TODO: Write a gem summary}
+  gem.description   = %q{Runs stuff inside of a VirtualBox VM}
+  gem.summary       = %q{Runs stuff inside of a VirtualBox VM}
   gem.homepage      = ""
 
   gem.files         = `git ls-files`.split($\)
@@ -13,5 +13,9 @@ Gem::Specification.new do |gem|
   gem.test_files    = gem.files.grep(%r{^(test|spec|features)/})
   gem.name          = "virtualbox-guestcontrol"
   gem.require_paths = ["lib"]
-  gem.version       = Virtualbox::Guestcontrol::VERSION
+  gem.version       = VirtualBox::GuestControl::VERSION
+  
+  gem.add_dependency 'shellter'
+  gem.add_dependency 'activesupport', "~> 3.0"
+  gem.add_dependency 'clamp'
 end
