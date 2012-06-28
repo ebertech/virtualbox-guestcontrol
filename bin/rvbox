@@ -4,12 +4,16 @@ require File.expand_path("../../lib/virtualbox-guestcontrol.rb", __FILE__)
 class VirtualBoxCommand < Clamp::Command
   option ["-u", "--username"], "USERNAME", "username to log in as"
   option ["-p", "--password"], "PASSWORD", "password to log in as"
+  option ["-t", "--timeout"], "TIMEOUT", "timeout in seconds"
+  option ["-b", "--vboxmanage"], "PATH", "path to VBoxManage"
 
   def virtual_box
     VirtualBox::GuestControl::Runner.configure do |c|
       c.name = name
       c.username = username
       c.password = password
+      c.vbox_manage = vboxmanage unless vboxmanage.nil?
+      c.default_timeout = timeout unless vboxmanage.nil?
     end
     VirtualBox::GuestControl::Runner.new
   end
