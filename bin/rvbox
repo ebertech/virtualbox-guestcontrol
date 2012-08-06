@@ -53,6 +53,24 @@ class VirtualBoxCommand < Clamp::Command
       end
     end
   end
+  
+  subcommand "usblist", "list usb devices on host" do
+    def execute
+      VirtualBox::GuestControl::Runner.usb_devices.each do |device|
+        puts device.to_s
+      end
+    end
+  end
+
+  subcommand "usbdetach", "detach usb devices on host" do
+    parameter "NAME", "name of virtual machine"
+    
+    def execute
+      VirtualBox::GuestControl::Runner.usb_devices.each do |device|
+        device.detach(name)
+      end
+    end
+  end
 
   subcommand "status", "says if the vm is booted or not" do
     parameter "NAME", "name of virtual machine"
@@ -63,6 +81,33 @@ class VirtualBoxCommand < Clamp::Command
       else
         puts "VM is shutdown"
       end
+    end
+  end
+  
+  subcommand "list", "lists the available VMs" do    
+    option ["--uuid"], :flag, "show only uuid", :default => false
+    option ["--name"], :flag, "show only name", :default => false    
+    
+    def execute
+      VirtualBox::GuestControl::Runner.virtual_machines.each do |name, uuid|
+        if uuid?
+          puts uuid
+        elsif name?
+          puts name
+        else
+          puts [name, uuid].join("\t")
+        end
+      end
+    end
+  end
+  
+  subcommand "execute", "execute a given command" do
+    parameter "NAME", "name of virtual machine"
+    parameter "[COMMAND_PARAMETERS] ...", "command and parameters to pass to the VM", :attribute_name => :command_parameters
+    
+    def execute
+      image_name, arguments = command_parameters
+      virtual_box.execute *command_parameters
     end
   end
 end

@@ -10,7 +10,7 @@ module VirtualBox
     class Runner
       include ActiveSupport::Configurable
 
-      self.config[:default_timeout] = 120.seconds
+      self.config[:default_timeout] = 240.seconds
       self.config[:vbox_manage] = Shellter.which("VBoxManage")
 
       config_accessor :vbox_manage
@@ -19,19 +19,23 @@ module VirtualBox
       config_accessor :username
       config_accessor :password
 
-      #validate that vbox_manage exists
-      #validate that name is a valid name
+      def valid?
+        
+      end
 
       def started?
-        state[:GuestAdditionsRunLevel] == "2"
+        state[:GuestAdditionsRunLevel] == "2" || state[:GuestAdditionsRunLevel] == "3"
       end
 
       def shutdown?
-        ["poweroff", "aborted"].include?(state[:VMState])
+        ["poweroff", "aborted", "saved"].include?(state[:VMState])
       end
 
       def shutdown!(force = false)
         return if shutdown?
+
+        detach_usb_devices
+
         if force
           Shellter.run(vbox_manage, "controlvm", ":name", "poweroff", :name => name)
           wait_until { shutdown? }
@@ -83,18 +87,19 @@ module VirtualBox
             options[:password] = password
           end
 
-          params += ["--wait-stdout"]
-          params += ["--timeout", ":timeout"]
-          options[:timeout] = default_timeout.to_s
+          # params += ["--timeout", ":timeout"]
+          params += ["--wait-exit", "--wait-stdout"]
+          # options[:timeout] = default_timeout.to_s
 
           unless arguments.empty?
-            params += ["--", ":arguments"]
-            options[:arguments] = arguments.join(" ")
+            params += ["--"] + arguments
           end
 
           params << options
+          
+          result = Shellter.run(vbox_manage, *params)
+          puts result.stdout.read
 
-          Shellter.run!(vbox_manage, *params)
         end
       end
 
@@ -105,6 +110,83 @@ module VirtualBox
             name, value = line.strip.split("=").map { |y| y.gsub(/(^"|"$)/, "") }
             map[name] = value
           end
+        end
+      end
+      
+      class UsbDevice
+        class << self
+          def parse(output, vbox_manage)
+            [].tap do |devices|
+              device = nil
+              output.lines.each do |line|
+                if device
+                  if line.strip.blank?
+                    devices << device
+                    device = nil
+                  else
+                    key, value = line.split(":")
+                    key = key.strip.gsub(" ", "_").underscore
+                    value = value.strip
+                    device.send(:"#{key}=", value)
+                  end
+                else
+                  next unless line =~ /UUID:/                  
+                  value = line.split(":").last.strip
+                  device = new(value, vbox_manage)
+                end
+              end
+            end
+          end
+        end
+        
+        attr_accessor :uuid, :vendor_id, :product_id, :revision
+        attr_accessor :manufacturer, :product, :address, :current_state
+        attr_accessor :serial_number
+        attr_accessor :vbox_manage
+        
+        def initialize(uuid, vbox_manage)
+          self.vbox_manage = vbox_manage
+          self.uuid = uuid
+        end
+        
+        def detach(name)
+          result = Shellter.run(vbox_manage, "controlvm", ":name", "usbdetach", ":uuid", :name => name, :uuid => uuid)          
+        end
+        
+        def attach(name)
+          Shellter.run!(vbox_manage, "controlvm", ":name", "usbattach", ":uuid", :name => name, :uuid => uuid)
+        end
+        
+        def to_s
+          "#{product} (#{uuid}): #{current_state}"
+        end
+      end
+      
+      def detach_usb_devices
+        self.class.usb_devices.each do |device|
+          device.detach(name)          
+        end
+      end
+      
+      def attach_usb_devices
+        self.class.usb_devices.each do |device|
+          device.attach(name)          
+        end        
+      end
+      
+      VM_MATCHER = /^"([^"]*)" \{(.*)\}$/
+      
+      class << self
+        def virtual_machines
+          result = Shellter.run!(vbox_manage, "list", "vms")
+          result.stdout.read.lines.map do |line|
+            line.scan(VM_MATCHER).first
+          end
+        end
+        
+        def usb_devices
+          result = Shellter.run!(vbox_manage, "list", "usbhost")
+          UsbDevice.parse(result.stdout, vbox_manage)
         end
       end
 
@@ -123,12 +205,12 @@ module VirtualBox
         end
       end
 
-      def with_started_machine
+      def with_started_machine(shutdown_after = false)
         begin
           start!
           yield
         ensure
-          shutdown!
+          shutdown! if shutdown_after
         end
       end
     end
