@@ -1,5 +1,5 @@
 # -*- encoding: utf-8 -*-
-require File.expand_path('../lib/virtualbox-guestcontrol/version', __FILE__)
+require File.expand_path('../lib/virtualbox/guest_control/version', __FILE__)
 
 Gem::Specification.new do |gem|
   gem.authors       = ["Andrew Eberbach"]
@@ -18,4 +18,5 @@ Gem::Specification.new do |gem|
   gem.add_dependency 'shellter'
   gem.add_dependency 'activesupport', "~> 3.0"
   gem.add_dependency 'clamp'
+  gem.add_dependency 'state_machine'
 end

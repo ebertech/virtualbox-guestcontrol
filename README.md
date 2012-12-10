@@ -20,6 +20,9 @@ Or install it yourself as:
 
 TODO: Write usage instructions here
 
+bundle exec rvbox execute --username XXX --password YYY "ZZZ" "c:\\windows\system32\\systeminfo.exe" |grep "System Up Time"
+bundle exec rvbox execute --username XXX --password YYY "ZZZ" "c:\\windows\system32\\shutdown.exe"  -s -t 0
+
 ## Contributing
 
 1. Fork it
