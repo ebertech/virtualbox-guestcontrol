@@ -52,7 +52,6 @@ module VirtualBox
         before_transition any => :running do |machine, transition|
           Shellter.run!(machine.vbox_manage, "startvm", ":name", :name => machine.name)
           machine.wait_until { machine.running? }
-          machine.wait_until { machine.guest_additions_started? }
         end
 
         before_transition :running => :poweroff do |machine, transition|
@@ -88,6 +87,17 @@ module VirtualBox
             with_started_machine do
               execute(*arguments)
             end
+          end
+        end
+
+        state :starting do
+          def status
+            "Starting Up"
+          end
+
+          def execute(*arguments)
+            wait_until { running? }
+            execute(*arguments)
           end
         end
 
@@ -155,7 +165,16 @@ module VirtualBox
       end
 
       def state
-        environment[:VMState]
+        state_name = environment[:VMState]
+        if state_name == "running"
+          if guest_additions_started?
+            state_name
+          else
+            "starting"
+          end
+        else
+          state_name
+        end
       end
 
       def guest_additions_started?
@@ -183,12 +202,16 @@ module VirtualBox
 
 
       def environment
-        result = Shellter.run!(vbox_manage, "showvminfo", ":name", "--machinereadable", :name => name)
-        {}.with_indifferent_access.tap do |map|
-          result.stdout.read.lines.each do |line|
-            name, value = line.strip.split("=").map { |y| y.gsub(/(^"|"$)/, "") }
-            map[name] = value
+        begin
+          result = Shellter.run!(vbox_manage, "showvminfo", ":name", "--machinereadable", :name => name)
+          {}.with_indifferent_access.tap do |map|
+            result.stdout.read.lines.each do |line|
+              name, value = line.strip.split("=").map { |y| y.gsub(/(^"|"$)/, "") }
+              map[name] = value
+            end
           end
+        rescue
+          {}
         end
       end
 
